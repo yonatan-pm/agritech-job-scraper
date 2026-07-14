@@ -1,0 +1,21 @@
+{
+  "name": "agritech-job-scraper",
+  "version": "1.0.0",
+  "description": "Daily scraper for agronomy/agritech jobs from AgriSupport Online",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.js",
+    "once": "node src/index.js --once",
+    "seed": "node src/index.js --once --seed"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@emailjs/nodejs": "^5.0.2",
+    "cheerio": "^1.0.0",
+    "dotenv": "^16.4.7",
+    "node-cron": "^3.0.3"
+  }
+}
