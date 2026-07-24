@@ -19,9 +19,16 @@ export async function sendJobAlert({
     );
   }
 
+  const sourceLabel = {
+    agrisupport: "AgriSupport",
+    "agri-gov": "Volcani / agri.gov.il",
+    weizmann: "Weizmann",
+    huji: "HUJI",
+  };
+
   const lines = jobs.map(
     (j, i) =>
-      `${i + 1}. ${j.title}\n` +
+      `${i + 1}. [${sourceLabel[j.source] || j.source || "source"}] ${j.title}\n` +
       `   Location: ${j.location || "—"}\n` +
       `   Date: ${j.date || "—"}\n` +
       `   ${j.description || ""}\n` +
@@ -30,9 +37,8 @@ export async function sendJobAlert({
 
   const subject = `Agritech/Agronomy jobs: ${jobs.length} new match${jobs.length === 1 ? "" : "es"}`;
   const message =
-    `Found ${jobs.length} new agronomy/agritech job(s) on AgriSupport:\n\n` +
-    lines.join("\n") +
-    `\nSource: https://www.israel.agrisupportonline.com/drushim/csv/csvread.pl?mytemplate=tp1`;
+    `Found ${jobs.length} new agronomy/agritech job(s):\n\n` +
+    lines.join("\n");
 
   const templateParams = {
     to_email: notifyEmail,

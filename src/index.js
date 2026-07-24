@@ -2,8 +2,8 @@ import path from "path";
 import { fileURLToPath } from "url";
 import dotenv from "dotenv";
 import cron from "node-cron";
-import { scrapeJobs } from "./scraper.js";
-import { isAgronomyOrAgritech } from "./filter.js";
+import { scrapeAll, sourceNeedsFilter, SOURCES } from "./scrapers/index.js";
+import { hasStrongAgronomySignal, isAgronomyOrAgritech } from "./filter.js";
 import { sendJobAlert } from "./email.js";
 import { loadSeen, saveSeen } from "./seen.js";
 
@@ -15,9 +15,17 @@ const SEEN_FILE = path.join(root, "data", "seen-jobs.json");
 
 function config() {
   return {
-    jobsUrl:
+    jobsSources: process.env.JOBS_SOURCES || "all",
+    agrisupportUrl:
       process.env.JOBS_URL ||
       "https://www.israel.agrisupportonline.com/drushim/csv/csvread.pl?mytemplate=tp1",
+    agriGovUrl: process.env.AGRI_GOV_URL || "https://www.agri.gov.il/wanted/",
+    weizmannUrl:
+      process.env.WEIZMANN_URL ||
+      "https://www.weizmann.ac.il/career/jobs?categories=7",
+    hujiUrl:
+      process.env.HUJI_URL ||
+      "https://huji.hunterhrms.com/search-results/?areas%5B%5D=4",
     emailjs: {
       serviceId: process.env.EMAILJS_SERVICE_ID || "",
       templateId: process.env.EMAILJS_TEMPLATE_ID || "",
@@ -30,16 +38,32 @@ function config() {
   };
 }
 
+function isMatch(job) {
+  if (!sourceNeedsFilter(job.source)) return true;
+  // Weizmann titles often say "טכנולוגיה" for IT — require a strong agronomy signal
+  if (job.source === "weizmann") {
+    return hasStrongAgronomySignal({
+      title: job.title,
+      description: "",
+      location: "",
+    });
+  }
+  return isAgronomyOrAgritech(job);
+}
+
 export async function runOnce({ seed = false } = {}) {
   const cfg = config();
   console.log(`[${new Date().toISOString()}] Scanning jobs…`);
 
-  const jobs = await scrapeJobs(cfg.jobsUrl, cfg.maxPages);
-  console.log(`Fetched ${jobs.length} listings`);
+  const { jobs, errors } = await scrapeAll(cfg);
+  console.log(`Fetched ${jobs.length} listings from all sources`);
 
-  const matched = jobs.filter(isAgronomyOrAgritech);
-  console.log(`Matched agronomy/agritech: ${matched.length}`);
-  matched.slice(0, 15).forEach((j) => console.log(`  • ${j.title}`));
+  const matched = jobs.filter(isMatch);
+  console.log(`Matched / included: ${matched.length}`);
+  matched.slice(0, 20).forEach((j) => {
+    const label = SOURCES[j.source]?.name || j.source;
+    console.log(`  • [${label}] ${j.title}`);
+  });
 
   const seen = loadSeen(SEEN_FILE);
 
@@ -50,17 +74,28 @@ export async function runOnce({ seed = false } = {}) {
     console.log(
       `Saved ${matched.length} matches as baseline (no email). New posts will trigger EmailJS alerts.`
     );
-    return { matched, fresh: [], emailed: false };
+    if (errors.length) {
+      console.warn(
+        `Completed with ${errors.length} source error(s). Fix and re-run seed if needed.`
+      );
+    }
+    return { matched, fresh: [], emailed: false, errors };
   }
 
   const fresh = matched.filter((j) => !seen.has(j.id));
   if (fresh.length === 0) {
     console.log("No new matching jobs.");
-    return { matched, fresh, emailed: false };
+    if (errors.length) {
+      console.warn(`Completed with ${errors.length} source error(s).`);
+    }
+    return { matched, fresh, emailed: false, errors };
   }
 
   console.log(`New jobs to notify: ${fresh.length}`);
-  fresh.forEach((j) => console.log(`  • ${j.title} — ${j.url}`));
+  fresh.forEach((j) => {
+    const label = SOURCES[j.source]?.name || j.source;
+    console.log(`  • [${label}] ${j.title} — ${j.url}`);
+  });
 
   await sendJobAlert({
     ...cfg.emailjs,
@@ -71,7 +106,7 @@ export async function runOnce({ seed = false } = {}) {
   for (const j of fresh) seen.add(j.id);
   saveSeen(SEEN_FILE, seen);
   console.log("Email sent via EmailJS and seen list updated.");
-  return { matched, fresh, emailed: true };
+  return { matched, fresh, emailed: true, errors };
 }
 
 async function main() {

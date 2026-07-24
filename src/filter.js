@@ -89,14 +89,18 @@ function normalize(text) {
   return (text || "").toLowerCase();
 }
 
+export function hasStrongAgronomySignal(job) {
+  const haystack = normalize(`${job.title} ${job.description} ${job.location}`);
+  return STRONG.some((k) => haystack.includes(k.toLowerCase()));
+}
+
 /**
  * Returns true if the job looks like agronomy or agritech.
  */
 export function isAgronomyOrAgritech(job) {
   const haystack = normalize(`${job.title} ${job.description} ${job.location}`);
 
-  const hasStrong = STRONG.some((k) => haystack.includes(k.toLowerCase()));
-  if (hasStrong) return true;
+  if (hasStrongAgronomySignal(job)) return true;
 
   const hasKeyword = KEYWORDS.some((k) => haystack.includes(k.toLowerCase()));
   if (!hasKeyword) return false;

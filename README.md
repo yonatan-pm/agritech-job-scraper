@@ -1,6 +1,17 @@
 # Agritech / Agronomy Job Scraper
 
-Daily scanner for [AgriSupport Online jobs](https://www.israel.agrisupportonline.com/drushim/csv/csvread.pl?mytemplate=tp1). Filters for **agronomy** and **agritech** roles and emails new matches to **tymaayan@gmail.com** via **EmailJS**.
+Daily scanner across multiple Israeli agronomy / research job boards. Emails new matches to **tymaayan@gmail.com** via **EmailJS**.
+
+## Sources
+
+| Key | Board | Filter |
+|-----|--------|--------|
+| `agrisupport` | [AgriSupport Online](https://www.israel.agrisupportonline.com/drushim/csv/csvread.pl?mytemplate=tp1) | Keyword filter (agronomy / agritech) |
+| `agri-gov` | [Volcani / agri.gov.il wanted](https://www.agri.gov.il/wanted/) | All listings (ag board) |
+| `weizmann` | [Weizmann careers](https://www.weizmann.ac.il/career/jobs?categories=7) | Keyword filter |
+| `huji` | [HUJI Hunter](https://huji.hunterhrms.com/search-results/?areas%5B%5D=4) (agriculture area) | All listings (ag faculty area) |
+
+Set `JOBS_SOURCES=all` (default) or a comma list, e.g. `agrisupport,agri-gov,huji`.
 
 ## Setup
 
@@ -27,6 +38,7 @@ copy .env.example .env
 ```
 
 ```
+JOBS_SOURCES=all
 EMAILJS_SERVICE_ID=service_xxx
 EMAILJS_TEMPLATE_ID=template_xxx
 EMAILJS_PUBLIC_KEY=xxxxxxxx
@@ -37,7 +49,7 @@ CRON_SCHEDULE=0 9 * * *
 
 ## Usage
 
-**Seed baseline (recommended first run — no email):**
+**Seed baseline (recommended after adding sources — no email):**
 
 ```bash
 npm run seed
@@ -63,14 +75,14 @@ node src/index.js --now
 
 ## What gets matched
 
-Jobs whose title/description mention agronomy or agritech signals, for example:
+For AgriSupport and Weizmann, jobs whose title/description mention agronomy or agritech signals, for example:
 
 - אגרונום / agronomist
 - אגרוטק / agritech
 - בקרת השקיה, חיישנים, precision agriculture
 - ביוטכנולוגיה, מו״פ, מדעי הצמח
 
-Pure gardening / general labor posts are usually skipped unless they also look tech-related.
+Volcani and HUJI agriculture-area boards are included as-is (already scoped).
 
 ## Run daily on GitHub (free)
 
@@ -83,8 +95,9 @@ The repo includes a GitHub Actions workflow (`.github/workflows/daily-scrape.yml
    - `EMAILJS_PUBLIC_KEY`
    - `EMAILJS_PRIVATE_KEY`
    - `NOTIFY_EMAIL`
-3. Open **Actions → Daily job scrape → Run workflow** once to verify.
-4. After that it runs on the schedule automatically.
+3. After adding new sources, run `npm run seed` locally (or temporarily change the workflow to `npm run seed`) once so you are not emailed the entire current backlog.
+4. Open **Actions → Daily job scrape → Run workflow** once to verify.
+5. After that it runs on the schedule automatically.
 
 Do **not** commit your `.env` file (it is gitignored).
 

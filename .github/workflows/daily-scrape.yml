@@ -19,7 +19,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
           cache: npm
 
       - name: Install dependencies
@@ -33,7 +33,11 @@ jobs:
           EMAILJS_PUBLIC_KEY: ${{ secrets.EMAILJS_PUBLIC_KEY }}
           EMAILJS_PRIVATE_KEY: ${{ secrets.EMAILJS_PRIVATE_KEY }}
           NOTIFY_EMAIL: ${{ secrets.NOTIFY_EMAIL }}
+          JOBS_SOURCES: ${{ vars.JOBS_SOURCES }}
           JOBS_URL: ${{ vars.JOBS_URL }}
+          AGRI_GOV_URL: ${{ vars.AGRI_GOV_URL }}
+          WEIZMANN_URL: ${{ vars.WEIZMANN_URL }}
+          HUJI_URL: ${{ vars.HUJI_URL }}
           MAX_PAGES: ${{ vars.MAX_PAGES }}
 
       - name: Persist seen jobs
